@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Program Learning Library — v2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Albert+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script src="data.js"></script>
+<script type="text/babel" src="icons.jsx"></script>
+<script type="text/babel" src="chrome.jsx"></script>
+<script type="text/babel" src="page_browse.jsx"></script>
+<script type="text/babel" src="page_ask.jsx"></script>
+<script type="text/babel" src="page_upload.jsx"></script>
+<script type="text/babel" src="page_insights.jsx"></script>
+<script type="text/babel" src="page_misc.jsx"></script>
+
+<script type="text/babel">
+const TWEAKS_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "useAI": true,
+  "density": "comfortable",
+  "accentHue": "plum",
+  "homeVariant": "editorial",
+  "showTweaksOnLoad": false
+}/*EDITMODE-END*/;
+
+const { useState, useEffect } = React;
+
+function applyAccent(hue) {
+  const root = document.documentElement;
+  const map = {
+    teal:    { accent: '#2d6e68', soft: '#d8e6e2' },
+    indigo:  { accent: '#394e8a', soft: '#dce2ef' },
+    olive:   { accent: '#5c6b3d', soft: '#e3e6d5' },
+    plum:    { accent: '#6b3d52', soft: '#ecd9e0' },
+  };
+  const v = map[hue] || map.teal;
+  root.style.setProperty('--accent', v.accent);
+  root.style.setProperty('--accent-soft', v.soft);
+}
+function applyDensity(d) {
+  document.body.style.fontSize = d === 'compact' ? '14px' : '15px';
+}
+
+function App() {
+  const data = window.PLL_DATA;
+  const [page, setPage] = useState(() => localStorage.getItem('pll_page') || 'browse');
+  const [doc, setDoc] = useState(null);
+  const [askSeed, setAskSeed] = useState('');
+  const [tweaks, setTweaks] = useState(TWEAKS_DEFAULTS);
+  const [tweaksOpen, setTweaksOpen] = useState(false);
+
+  useEffect(() => { localStorage.setItem('pll_page', page); }, [page]);
+  useEffect(() => { applyAccent(tweaks.accentHue); applyDensity(tweaks.density); }, [tweaks.accentHue, tweaks.density]);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === '__activate_edit_mode') setTweaksOpen(true);
+      if (e.data?.type === '__deactivate_edit_mode') setTweaksOpen(false);
+    };
+    window.addEventListener('message', handler);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
+  window.__setPage = setPage;
+
+  const openDoc = (d) => setDoc(d);
+  const goAsk = (seed = '') => { setAskSeed(seed); setPage('ask'); };
+
+  const setTweak = (k, v) => {
+    const next = { ...tweaks, [k]: v };
+    setTweaks(next);
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits: { [k]: v } }, '*');
+  };
+
+  let body;
+  switch (page) {
+    case 'browse':     body = <BrowsePage data={data} openDoc={openDoc} goAsk={goAsk} />; break;
+    case 'ask':        body = <AskPage data={data} openDoc={openDoc} initialQuery={askSeed} useAI={tweaks.useAI} key={askSeed} />; break;
+    case 'upload':     body = <UploadPage data={data} useAI={tweaks.useAI} onDone={() => setPage('browse')} />; break;
+    case 'dashboard':  body = <InsightsPage data={data} openDoc={openDoc} goAsk={goAsk} />; break;
+    case 'gaps':       body = <InsightsPage data={data} openDoc={openDoc} goAsk={goAsk} />; break;
+    case 'collections':
+      body = <StubPage title="Collections" subtitle="Curated sets — flagship initiatives, annual retrospectives, board packets." icon="stack">
+        <div style={{display:'grid',gridTemplateColumns:'repeat(2, 1fr)',gap:14,marginTop:24,maxWidth:620,margin:'24px auto 0'}}>
+          {data.collections.map(c => (
+            <div key={c.id} className={`collection-card ${c.color}`} style={{minHeight:140}}>
+              <div className="coll-label">{c.label}</div>
+              <div className="coll-title serif">{c.title}</div>
+              <div className="coll-count">{c.count} resources</div>
+            </div>
+          ))}
+        </div>
+      </StubPage>;
+      break;
+    case 'bookmarks':  body = <StubPage title="My reading list" subtitle="Documents you've saved, and notes you've taken on them." icon="bookmark" />; break;
+    case 'style':      body = <StubPage title="Editorial style guide" subtitle="Voice, formatting, citation standards, and the Quick Checklist for reviewing program resources." icon="book" />; break;
+    case 'tags':       body = <StubPage title="Tag reference" subtitle="The controlled vocabulary: geographies, topics, collections, and their definitions." icon="tag" />; break;
+    case 'agenda':     body = <StubPage title="Learning & Innovation Agenda" subtitle="The questions we've committed to answering this year, with progress against each." icon="lightbulb" />; break;
+    default: body = <BrowsePage data={data} openDoc={openDoc} goAsk={goAsk} />;
+  }
+
+  return (
+    <div className="app">
+      <Sidebar page={page} setPage={setPage} data={data} />
+      <div className="main">
+        <Topbar />
+        {body}
+      </div>
+      <DocModal doc={doc} onClose={() => setDoc(null)} goAsk={goAsk} />
+
+      {tweaksOpen && (
+        <div className="tweaks-panel">
+          <h4>Tweaks <button className="iconbtn" onClick={() => setTweaksOpen(false)}><Icon name="x" size={13} /></button></h4>
+
+          <div className="tweak-row">
+            <label>AI-powered search & tagging</label>
+            <div className="tweak-seg">
+              <button className={tweaks.useAI ? 'on' : ''} onClick={() => setTweak('useAI', true)}>Live AI</button>
+              <button className={!tweaks.useAI ? 'on' : ''} onClick={() => setTweak('useAI', false)}>Heuristic</button>
+            </div>
+            <div style={{fontSize:11,color:'var(--ink-3)'}}>When on, Ask and Upload call a real model.</div>
+          </div>
+
+          <div className="tweak-row">
+            <label>Density</label>
+            <div className="tweak-seg">
+              <button className={tweaks.density === 'comfortable' ? 'on' : ''} onClick={() => setTweak('density', 'comfortable')}>Comfortable</button>
+              <button className={tweaks.density === 'compact' ? 'on' : ''} onClick={() => setTweak('density', 'compact')}>Compact</button>
+            </div>
+          </div>
+
+          <div className="tweak-row">
+            <label>Accent hue</label>
+            <div className="tweak-seg">
+              {['teal','indigo','olive','plum'].map(h => (
+                <button key={h} className={tweaks.accentHue === h ? 'on' : ''} onClick={() => setTweak('accentHue', h)}>{h}</button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{marginTop:14,paddingTop:14,borderTop:'1px solid var(--rule)',fontSize:11.5,color:'var(--ink-3)',lineHeight:1.5}}>
+            <b>Try:</b> Ask "What have we learned about sustainable sanitation finance in Rwanda?" — it uses live AI to synthesize across docs.
+          </div>
+
+          <div style={{marginTop:10}}>
+            <a href="sharepoint-guide.html" target="_blank" style={{fontSize:12,color:'var(--accent)'}}>
+              → Open the SharePoint deployment guide
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
