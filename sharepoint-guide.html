@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Deploying the Program Learning Library in SharePoint</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Source+Serif+4:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css" />
+<style>
+  body { background: var(--bg); }
+  .guide-wrap { max-width: 780px; margin: 0 auto; padding: 60px 32px 120px; }
+  .guide-wrap h1 { font-family: var(--serif); font-size: 48px; letter-spacing: -0.02em; line-height: 1.05; margin: 0 0 14px; }
+  .guide-wrap h2 { font-family: var(--serif); font-size: 28px; letter-spacing: -0.01em; margin: 48px 0 14px; padding-top: 24px; border-top: 1px solid var(--rule); }
+  .guide-wrap h3 { font-family: var(--serif); font-size: 20px; margin: 32px 0 8px; }
+  .guide-wrap h4 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ink-3); margin: 22px 0 8px; font-weight: 500; }
+  .guide-wrap p { font-size: 15.5px; line-height: 1.65; margin: 0 0 14px; }
+  .guide-wrap ol, .guide-wrap ul { font-size: 15.5px; line-height: 1.65; padding-left: 22px; }
+  .guide-wrap li { margin-bottom: 8px; }
+  .guide-wrap code { font-family: var(--mono); font-size: 13px; background: var(--bg-elev); border: 1px solid var(--rule); padding: 1px 5px; border-radius: 3px; }
+  .guide-wrap pre { background: #1a1a1a; color: #eee; padding: 16px 18px; border-radius: 6px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; line-height: 1.55; margin: 14px 0; }
+  .kicker { font-size: 12px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--ink-3); margin-bottom: 12px; }
+  .callout { padding: 18px 20px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: 0 4px 4px 0; margin: 18px 0; font-size: 14px; line-height: 1.6; }
+  .callout.warn { border-left-color: var(--warm); background: var(--warm-soft); }
+  .callout.warn strong { color: #7a2f1a; }
+  .callout strong { color: #1e524d; }
+  .path-table { width: 100%; border-collapse: collapse; margin: 18px 0; }
+  .path-table th, .path-table td { border: 1px solid var(--rule); padding: 10px 12px; text-align: left; font-size: 13.5px; vertical-align: top; }
+  .path-table th { background: var(--bg-elev); font-weight: 500; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); }
+  .path-table td:first-child { font-weight: 500; width: 140px; }
+  .step { display: grid; grid-template-columns: 36px 1fr; gap: 16px; margin: 20px 0; }
+  .step-num { width: 30px; height: 30px; border-radius: 50%; background: var(--ink); color: #fff; display: grid; place-items: center; font-family: var(--serif); font-size: 15px; }
+  .step-body { padding-top: 4px; }
+  .step-body strong { font-size: 15.5px; }
+  .screenshot-hint { background: var(--bg-elev); border: 1px dashed var(--rule-2); padding: 12px 14px; border-radius: 4px; font-family: var(--mono); font-size: 12px; color: var(--ink-3); margin: 8px 0; }
+  .toc { background: var(--paper); border: 1px solid var(--rule); border-radius: 6px; padding: 20px 24px; margin: 24px 0 36px; }
+  .toc-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 10px; font-weight: 500; }
+  .toc ol { font-size: 14px; margin: 0; padding-left: 22px; }
+  .toc li { margin-bottom: 5px; }
+  .toc a { color: var(--ink); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .backlink { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--accent); text-decoration: none; margin-bottom: 30px; }
+</style>
+</head>
+<body>
+<div class="guide-wrap">
+  <a class="backlink" href="Program Learning Library.html">← Back to the prototype</a>
+  <div class="kicker">Deployment guide · SharePoint Online</div>
+  <h1>How to ship this hub on SharePoint, honestly.</h1>
+  <p style="font-size:17px;color:var(--ink-3)">This is a practical guide, written for a site admin who hasn't built SharePoint things before. It covers what's actually possible, what you'll fake with native pieces, and where you'll need help.</p>
+
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#reality">What SharePoint can and can't do</a></li>
+      <li><a href="#paths">Three deployment paths, ranked</a></li>
+      <li><a href="#path-a">Path A — Native SharePoint page (fastest, most limited)</a></li>
+      <li><a href="#path-b">Path B — Embed the prototype as-is (fastest-to-ship of the custom options)</a></li>
+      <li><a href="#path-c">Path C — SPFx web part (full custom, needs a developer)</a></li>
+      <li><a href="#ai">Making the AI parts actually work</a></li>
+      <li><a href="#metadata">The metadata structure (do this regardless of path)</a></li>
+      <li><a href="#replace">Replacing the existing page without losing anything</a></li>
+      <li><a href="#rollout">A realistic rollout plan</a></li>
+    </ol>
+  </div>
+
+  <h2 id="reality">1. What SharePoint can and can't do</h2>
+  <p>A modern SharePoint page is a grid of "web parts" — small pre-built modules like a news list, a document library view, a quick-links panel, a Yammer feed. As a site admin with no code, you are limited to the web parts Microsoft ships plus whatever your tenant admin has enabled. That's what your current page uses.</p>
+  <p><strong>What this means for the prototype you're looking at:</strong></p>
+  <ul>
+    <li><strong>The browse view, the filter rail, the collections strip</strong> — all buildable natively using a <em>Highlighted Content</em> web part pointed at a document library with custom metadata columns.</li>
+    <li><strong>The smart-search / ask-the-library experience</strong> — <em>not</em> buildable natively. SharePoint has keyword search and (on some licenses) Copilot, but you can't natively embed a custom AI-answer panel with citations. This needs either Microsoft's Copilot Studio or custom code.</li>
+    <li><strong>The 1-click upload with AI-drafted tags</strong> — partly buildable with Power Automate + AI Builder (a Microsoft no-code flow), but the user experience will be clunkier than the prototype.</li>
+    <li><strong>The insights dashboard</strong> — SharePoint's built-in Site Analytics gives you views, unique visitors, and popular pages. For custom dashboards (coverage heat map, queries with no answers), you'll either embed a Power BI report or use the custom code path.</li>
+  </ul>
+  <div class="callout warn"><strong>The honest headline:</strong> there is no way to reproduce this entire prototype using only the point-and-click SharePoint authoring UI. You'll either accept a reduced version, or bring in one round of developer help to build it properly. Both are fine — it depends on budget and timeline.</div>
+
+  <h2 id="paths">2. Three deployment paths, ranked</h2>
+  <table class="path-table">
+    <thead><tr><th>Path</th><th>What you get</th><th>Effort</th><th>Who does it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>A. Native rebuild</strong></td><td>Better browse + filter + collections than today. No AI search. Upload still manual but with an AI-assisted flow for tagging.</td><td>1–2 weeks of your time</td><td>You alone</td></tr>
+      <tr><td><strong>B. Embed this prototype</strong></td><td>The full experience you're looking at now, hosted inside a SharePoint page via an Embed web part. Documents still live in a SharePoint library — the prototype reads from it.</td><td>3–5 days</td><td>You + light IT help (hosting + a script to push documents to the prototype)</td></tr>
+      <tr><td><strong>C. SPFx custom web part</strong></td><td>Everything, built as a proper SharePoint extension, installed into your tenant. Most polished, most permanent.</td><td>4–8 weeks</td><td>A SharePoint developer (internal or contractor)</td></tr>
+    </tbody>
+  </table>
+  <p>My recommendation: <strong>start with Path A this quarter</strong> to get metadata, filters, and the new look live. Run Path B in parallel as a proof of the AI features for leadership. Commit to Path C for next fiscal year once you have real usage signals.</p>
+
+  <h2 id="path-a">3. Path A — Native SharePoint page</h2>
+  <p>You can do this today, alone, with no code. You will recreate the browse/filter/collections experience and a basic upload flow. You will <em>not</em> have smart search or a rich insights dashboard.</p>
+
+  <h3>Before you start</h3>
+  <ul>
+    <li>Confirm you have <strong>Site Owner</strong> (not just Member) permission on the Program Learning Library site. Go to the gear icon → <em>Site permissions</em> → check your row says "Owner".</li>
+    <li>In the site gear → <em>Site information</em>, confirm the site template is <strong>Communication site</strong> (it is — the page layout you showed me is the comm-site layout). If it's a Team site, most of this still works but the styling differs slightly.</li>
+  </ul>
+
+  <h3>Step-by-step</h3>
+
+  <div class="step">
+    <div class="step-num">1</div>
+    <div class="step-body">
+      <strong>Create a document library called "Resources"</strong>
+      <p>Gear icon → <em>Site contents</em> → <em>+ New</em> → <em>Document library</em>. Name it "Resources". This will hold every PDF, deck, video, etc. This is the backbone — every filter, every card, every search result reads from this library.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">2</div>
+    <div class="step-body">
+      <strong>Add the metadata columns</strong>
+      <p>In the new library, click <em>+ Add column</em> for each of the following. Using the column types listed matters — they power the filters later.</p>
+      <table class="path-table">
+        <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Title</td><td>Single line of text</td><td>Already exists; rename if needed</td></tr>
+          <tr><td>Summary</td><td>Multiple lines of text (Plain)</td><td>Plain — not rich text</td></tr>
+          <tr><td>Product Type</td><td>Choice</td><td>Values: Technical Note, Case Study, Blog, Report, Presentation, Tool, Video</td></tr>
+          <tr><td>Geography</td><td>Choice (multi-select)</td><td>Countries + "Global"</td></tr>
+          <tr><td>Topic</td><td>Managed Metadata</td><td>Requires term store access — see note below</td></tr>
+          <tr><td>Author(s)</td><td>Person (multi-select)</td><td>Pulls from your Microsoft 365 directory</td></tr>
+          <tr><td>Language</td><td>Choice</td><td>EN, ES</td></tr>
+          <tr><td>Publication Date</td><td>Date</td><td>Separate from the file's upload date</td></tr>
+          <tr><td>Partners</td><td>Single line</td><td></td></tr>
+          <tr><td>Funders</td><td>Single line</td><td></td></tr>
+          <tr><td>Collection</td><td>Choice</td><td>Your flagship collections</td></tr>
+          <tr><td>Tags</td><td>Managed Metadata</td><td>The controlled vocabulary</td></tr>
+        </tbody>
+      </table>
+      <div class="callout">
+        <strong>About Managed Metadata.</strong> These are controlled vocabularies managed centrally by your tenant admin in the "term store". They're better than plain text because they prevent "district WASH office" vs "District Wash Office" vs "DWO" drift. If you don't have term store access, use <em>Choice</em> columns for now and ask IT to migrate them to Managed Metadata later. Don't block launch on this.
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">3</div>
+    <div class="step-body">
+      <strong>Edit the homepage</strong>
+      <p>Navigate to the Program Learning Library homepage. Top right → <em>Edit</em>. The page becomes editable in sections. Remove the existing web parts (hover each one → trash icon), confirming with yourself before each that nothing is lost (see Section 8).</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">4</div>
+    <div class="step-body">
+      <strong>Add the hero and collections strip</strong>
+      <p>Click the <em>+</em> between sections → choose a two-column layout. In the left column add a <em>Text</em> web part and paste a hero title + subtitle. In the right, add a <em>Button</em> web part that opens the upload form.</p>
+      <p>Below, add a new section with a four-column layout and drop a <em>Quick Links</em> web part. Set layout to "Tiles", set each tile to a collection (link to a filtered library view — you'll create those in the next step).</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">5</div>
+    <div class="step-body">
+      <strong>Build filtered library views</strong>
+      <p>Go back to the Resources library. Top right → <em>All Documents</em> dropdown → <em>Create new view</em>. Create views called "Scaling with Government", "Learning & Innovation Agenda", etc. — each filtered by <code>Collection = [name]</code>. These become the targets of your tile links.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">6</div>
+    <div class="step-body">
+      <strong>Add the browse list to the homepage</strong>
+      <p>Back on the homepage in edit mode, add a <em>Highlighted Content</em> web part. Point it at the Resources library. Choose <em>List</em> layout. Under <em>Filter and sort</em>, set "Sort by: Most Recent". This is the equivalent of the current "Latest / Featured / Trending" tabs.</p>
+      <p>For "Featured" and "Trending", create two more Highlighted Content web parts in tabs — Featured filters by <code>Collection = Strategy</code>, Trending sorts by <em>Most viewed</em>.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">7</div>
+    <div class="step-body">
+      <strong>Add the filter rail</strong>
+      <p>In a narrow right-column section, add a <em>Quick Links</em> web part per filter facet (Geography, Topic, Product Type, etc.). Each link inside it goes to a pre-filtered library view. It's not a live faceted filter — it's a curated list of saved filter views. Good enough, and visually close to the current page.</p>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">8</div>
+    <div class="step-body">
+      <strong>Improve the upload flow with Power Automate + AI Builder</strong>
+      <p>This is the closest native equivalent to the 1-click upload in the prototype. It requires a Power Automate license (most M365 Business Premium and E3+ users have it).</p>
+      <ol>
+        <li>In Resources library, top right → <em>Integrate → Power Automate → Create a flow</em>.</li>
+        <li>Choose the template "When a new file is added, extract information using AI Builder".</li>
+        <li>In the flow editor, add an AI Builder action: <em>Summarize text</em> (pointed at the file's text content) → write the result back to the <code>Summary</code> column.</li>
+        <li>Add a second AI Builder action: <em>Categorize text</em> with your topic vocabulary → write to <code>Topic</code>.</li>
+        <li>Add a third: <em>Detect language</em> → write to <code>Language</code>.</li>
+        <li>Save. Test it by uploading a PDF and watching the columns auto-populate within a minute.</li>
+      </ol>
+      <div class="callout">
+        <strong>Reality check.</strong> The prototype's upload experience shows AI output inline and lets you review before publishing. Power Automate runs in the background after upload — so you get similar end metadata, but the UX is "drop file, come back in 30 seconds, review the columns it filled". Acceptable for most contributors.
+      </div>
+    </div>
+  </div>
+
+  <div class="step">
+    <div class="step-num">9</div>
+    <div class="step-body">
+      <strong>Add a basic insights tab</strong>
+      <p>Create a second page called "Insights". Add the <em>Site Analytics</em> web part (top-bar → <em>Analytics</em> on any page — it's usually available). Supplement with two <em>Highlighted Content</em> web parts: "Most viewed this month" (sort: Most popular) and "Recently added" (sort: Most recent).</p>
+      <p>For the richer dashboard — coverage heat map, contributions leaderboard, queries-with-no-answers — you need Power BI. Build a Power BI report reading from the Resources library, publish it, and embed it on the Insights page using the <em>Power BI</em> web part.</p>
+    </div>
+  </div>
+
+  <h2 id="path-b">4. Path B — Embed the prototype</h2>
+  <p>If your tenant has the <em>Embed</em> web part enabled and allows the hosting domain, you can drop the prototype into a SharePoint page as a full-width iframe. The prototype reads document metadata from your real SharePoint library via the Microsoft Graph API.</p>
+
+  <h3>What you need</h3>
+  <ul>
+    <li>Somewhere to host the HTML — your tenant's SharePoint tenant assets library works, or a company-approved static hosting service (Azure Static Web Apps is the path of least resistance for an M365 tenant).</li>
+    <li>A registered Azure AD app with <code>Sites.Read.All</code> permission on the site — this is a 15-minute job for your tenant admin.</li>
+    <li>Your IT team to allow-list the hosting domain in SharePoint's embed allow-list (Settings → SharePoint admin → Configure HTML field security).</li>
+  </ul>
+
+  <h3>How it works</h3>
+  <ol>
+    <li>You keep managing documents and metadata in the Resources library (as in Path A).</li>
+    <li>The prototype calls Graph to fetch the library on page load and renders the browse view.</li>
+    <li>Uploads post files back to the library; AI tagging runs client-side via Azure OpenAI (you'll need a subscription, which most M365 tenants can get).</li>
+    <li>You embed the hosted URL on your SharePoint page using the Embed web part:
+      <pre>&lt;iframe src="https://your-hosted-app.azurestaticapps.net" 
+        width="100%" height="1400"&gt;&lt;/iframe&gt;</pre>
+    </li>
+  </ol>
+
+  <h2 id="path-c">5. Path C — SPFx web part</h2>
+  <p>SPFx is Microsoft's official framework for custom SharePoint extensions. The prototype is converted into a web part (or set of web parts) and installed into your tenant's app catalog. Users add it to pages like any native web part.</p>
+  <p>This is the right long-term home, but it requires:</p>
+  <ul>
+    <li>A developer comfortable with TypeScript and React.</li>
+    <li>4–8 weeks of work (prototype conversion, security review, testing).</li>
+    <li>Tenant admin approval to publish to the app catalog.</li>
+  </ul>
+  <p>Budget roughly $15–35k if contracting externally, or one dev for a month internally. The upside is that it runs inside SharePoint's security context — no separate hosting, no allow-listing, single sign-on comes free.</p>
+
+  <h2 id="ai">6. Making the AI parts actually work</h2>
+  <p>Three ways to power the "ask the library" and smart-tagging features in production:</p>
+  <table class="path-table">
+    <thead><tr><th>Option</th><th>What it is</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td>Microsoft Copilot for M365</td><td>Natural-language search over all your SharePoint content. Works out of the box if you have the license. Not citation-style like the prototype, more chat-style.</td><td>~$30/user/month</td></tr>
+      <tr><td>Azure OpenAI + custom prompt</td><td>What the prototype simulates. Your developer wires the library contents into prompts and gets back cited answers. Full control over UX.</td><td>Pay-per-token, usually $50–300/month for a small team</td></tr>
+      <tr><td>Copilot Studio</td><td>No-code bot builder. You define a grounding source (the Resources library), users chat with the bot. Less polished than the prototype but no dev needed.</td><td>~$200/month for the bot + usage</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="metadata">7. The metadata structure — do this regardless of path</h2>
+  <p>Whichever path you pick, the Resources library with its metadata columns is the foundation. It survives from path to path — so invest in getting it right first, and the visual layer can change later without rework.</p>
+  <p><strong>One opinionated suggestion:</strong> the current site has filters for Partners and Funders. Keep these as <em>optional</em> columns — they're sparse on most documents and clutter the filter rail. Make Geography, Topic, Product Type, and Language the "hero" filters and relegate the rest to an "Advanced" collapse.</p>
+
+  <h2 id="replace">8. Replacing the existing page without losing anything</h2>
+  <p>Before you hit "publish" on the new page:</p>
+  <ol>
+    <li>Export the current page's contents. Open the old page in edit mode, copy each web part's contents into a Word doc. Also screenshot the full page at 100% zoom.</li>
+    <li>Audit the Upload / Video Tutorial / Style Guide / Checklist / Agenda / Tag Reference / Insights Dashboard links. Note each target URL. In your new IA, every one of these has a home — Upload → the new upload flow, Style Guide + Checklist + Tag Reference → sidebar "Resources" section, Video Tutorial → keep the same external link, etc.</li>
+    <li>Build the new page as a <em>second</em> page (name it "Program Learning Library v2 (draft)"). Don't touch the live page yet.</li>
+    <li>Share the draft with 3–5 power users for a week. Collect feedback. Iterate.</li>
+    <li>When ready, in site settings → <em>Navigation</em>, update the "Program Learning Library" link to point to the new page. Make the new page the site home (Site information → Select new home page).</li>
+    <li>Leave the old page live at its old URL for 30 days with a banner "This page has moved → [new URL]". Then archive it.</li>
+  </ol>
+  <div class="callout warn"><strong>Don't delete the old page</strong> until at least 60 days have passed. Internal links, emails, and external partner bookmarks can all point to it, and SharePoint's link redirection is imperfect.</div>
+
+  <h2 id="rollout">9. A realistic rollout plan</h2>
+  <table class="path-table">
+    <thead><tr><th>Week</th><th>What happens</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>Build the Resources library and migrate existing documents into it with metadata. This is the longest and least glamorous step; do it first.</td></tr>
+      <tr><td>2</td><td>Build Path A (native page) as a draft. Invite 3 power users to test.</td></tr>
+      <tr><td>3</td><td>Wire up Power Automate + AI Builder for tagging. Test uploads.</td></tr>
+      <tr><td>4</td><td>Soft launch to the full team. Keep the old page live.</td></tr>
+      <tr><td>5–8</td><td>Collect usage data. If the org is hungry for the AI features, commission Path B or C.</td></tr>
+      <tr><td>90 days</td><td>Archive the old page. Review insights. Plan a v2.</td></tr>
+    </tbody>
+  </table>
+
+  <div style="margin-top:60px;padding-top:30px;border-top:1px solid var(--rule);font-size:13px;color:var(--ink-3);line-height:1.6;">
+    <p>This guide assumes SharePoint Online (the cloud version, 2020+ "modern" UI). If your tenant is still on SharePoint 2019 on-prem or using classic pages, most of this still works but the screens look different. Ask your IT team what version you're on — it's in Settings → About.</p>
+    <p>Questions to bring to your tenant admin before you start:</p>
+    <ul>
+      <li>"Do we have Power Automate + AI Builder licenses?"</li>
+      <li>"Can I get Site Owner on the Program Learning Library site?"</li>
+      <li>"Is Managed Metadata / the term store open to me, or do I need to request terms through you?"</li>
+      <li>"Do we have M365 Copilot licenses? Is Azure OpenAI available in our tenant?"</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>
